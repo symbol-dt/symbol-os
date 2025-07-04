@@ -7,6 +7,7 @@ global stc, clc, std, cld, sti, cli
 global hlt, nop, step, set_break
 global lidt, lgdt, int80
 global sto_seg, lod_seg, lod_seg_stack
+global has_la57
 
 %macro single_com 1
 %1:
@@ -122,3 +123,12 @@ single_com std
 single_com cld
 single_com sti
 single_com cli
+
+has_la57:
+    mov eax, 7
+    xor ecx, ecx
+    cpuid
+    test ecx, (1<<16)
+    xor eax, eax
+    setnz al
+    ret

@@ -23,8 +23,8 @@ static void set_gdt(gdt_element_t *gdt, size_t base, size_t limit, uint8_t attr,
 }
 
 void init_idt(void){
-    dt_info_t *idr_hdr = (dt_info_t *)ADDR_IDT_INFO;
-    idt_element_t *idt_item = (idt_element_t *)ADDR_IDT;
+    dt_info_t *idr_hdr = (dt_info_t *) ADDR_IDT_INFO;
+    idt_element_t *idt_item = (idt_element_t *) ADDR_IDT;
     idr_hdr->addr = (size_t)idt_item;
     idr_hdr->size = sizeof(idt_element_t) * 256;
     set_idt(idt_item + 0, devide_error, IDT_TRAP_GATE);
@@ -49,8 +49,8 @@ void init_idt(void){
     return ;
 }
 void init_gdt(void){
-    dt_info_t *gdt_hdr = (dt_info_t *)ADDR_GDT_INFO;
-    gdt_element_t *gdt_item = (gdt_element_t *)ADDR_GDT;
+    dt_info_t *gdt_hdr = (dt_info_t *) ADDR_GDT_INFO;
+    gdt_element_t *gdt_item = (gdt_element_t *) ADDR_GDT;
     gdt_hdr->addr = (size_t)gdt_item;
     gdt_hdr->size = sizeof(gdt_element_t) * 7;
     set_gdt(gdt_item + 0, 0, 0, 0, 0);

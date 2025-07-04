@@ -1,4 +1,5 @@
 ; 地址
+%define ADDR_SEG_STACK      0x00660
 %define ADDR_SEG_BOOT       0x007c0
 %define ADDR_SEG_DATA       0x007e0
 %define ADDR_SEG_LOAD       0x00800
@@ -16,13 +17,15 @@
 ;   7e00    启动驱动器号
 ;   7e02    系统名称
 ;   7e0c    系统版本
-;   7e10    光标位置/char
-;   7e12    reserved
-;   7e20    CPUID 80000001 EAX
-;   7e24    CPUID 80000001 ECX
-;   7e28    CPUID 80000001 EDX
-;   7e2c    CPUID 80000001 EBX
-;   7e30    RSDP 拷贝
+;   7e10    光标位置
+;   7e12    内存获取有效位图
+;   7e14    LOW MEM 大小 (KB) INT 0x12
+;   7e16    UPR MEM 大小 (KB) INT 0x15 0x88
+;   7e18    UPR MEM 大小 (KB) INT 0x15 0x8a
+;   7e1c    UPR MEM 大小 (KB) CMOS
+;   7e1e    UPR MEM 大小 (KB) INT 0x15 0xda88
+;   7e22    EXT MEM 大小 (KB) INT 0x15 0xe801
+;   7e26    内存块数量 INT 0x15 0xe820
 ; 100000    IDT
 ; 101000    IDT INFO
 ;           GDT INFO
@@ -169,75 +172,72 @@
 ;   fe 保留
 ;   ff 保护
 
+; 程序段类型
+%define stf_data            0x010       ; 数据段
+%define stf_code            0x018       ; 代码段
+%define stf_dc              0x004       ; 环匹配 (代码段)
+                                        ; 向下增长 (数据段)
+%define stf_wa_ra           0x002       ; 可读 (代码段)
+                                        ; 可写 (数据段)
+%define stf_dirty           0x001       ; 已访问 (脏)
+; 系统段类型
+%define stf_sys_tss16       0x001       ; 可用的16位TSS
+%define stf_sys_ldt         0x002       ; 本地描述符表LDT
+%define stf_sys_tss16_buzy  0x003       ; 繁忙的16位TSS
+%define stf_sys_callgate16  0x004       ; 16位呼叫门
+%define stf_sys_taskgate    0x005       ; 任务门/Coum传输
+%define stf_sys_intgate16   0x006       ; 16位中断门
+%define stf_sys_trapgate16  0x007       ; 16位陷阱门
+%define stf_sys_tss32       0x009       ; 可用的32位TSS
+%define stf_sys_tss32_buzy  0x00b       ; 繁忙的32位TSS
+%define stf_sys_callgate32  0x00c       ; 32位调用门
+%define stf_sys_intgate32   0x00e       ; 32位中断门
+%define stf_sys_trapgate32  0x00f       ; 32位陷阱门
+; 段类型
+%define stf_level0          0x000
+%define stf_level1          0x020
+%define stf_level2          0x040
+%define stf_level3          0x060
+%define stf_present         0x080
+; 段选项
+%define stf_32def           0x400
+%define stf_32c16           0x000
+%define stf_64def           0x200
+%define stf_limitalign4kb   0x800
+
 ; 分段项
-%macro gdt_segment 4
-    ; gdt_segment (base, limit, type, attribute)
-    dw %2 & 0xffff
-    dw %1 & 0xffff
-    db (%1 >> 16) & 0xff
-    db %3 & 0xff
-    db (%4 & 0xf0) | ((%2 >> 14) & 0x0f)
-    db (%1 >> 24) & 0xff
+%macro gdt_segment 3
+    ; gdt_segment (base, limit, flags)
+    dw %2
+    dw %1
+    db (%1)>>16
+    db (%3)&0xff
+    db (((%3)>>4)&0xf0)|(((%2)>>16)&0xf)
+    db (%1)>>24
 %endmacro
 %macro gdt_null 0
-    gdt_segment 0, 0, 0, 0
+    gdt_segment 0, 0, 0
 %endmacro
 
-; 程序段类型
-%define sta_prog            0x10    ; 程序段
-%define sta_prog_d          0x00    ; 数据段
-%define sta_prog_x          0x08    ; 代码段
-%define sta_prog_cd         0x04    ; 符合要求的 (代码段)
-                                    ; 向下展开, 栈 (数据段)
-%define sta_prog_xwr        0x02    ; 可读 (代码段)
-                                    ; 可写 (数据段)
-%define sta_prog_dt         0x01    ; 已访问 (脏)
-; 系统段类型
-%define sta_sys_tss16       0x01     ; 可用的16位TSS
-%define sta_sys_ldt         0x02     ; 本地描述符表LDT
-%define sta_sys_tss16_buzy  0x03     ; 繁忙的16位TSS
-%define sta_sys_callgate16  0x04     ; 16位呼叫门
-%define sta_sys_taskgate    0x05     ; 任务门/Coum传输
-%define sta_sys_intgate16   0x06     ; 16位中断门
-%define sta_sys_trapgate16  0x07     ; 16位陷阱门
-%define sta_sys_tss32       0x09     ; 可用的32位TSS
-%define sta_sys_tss32_buzy  0x0b     ; 繁忙的32位TSS
-%define sta_sys_callgate32  0x0c     ; 32位调用门
-%define sta_sys_intgate32   0x0e     ; 32位中断门
-%define sta_sys_trapgate32  0x0f     ; 32位陷阱门
-; 段类型
-%define sta_level0          0x00
-%define sta_level1          0x20
-%define sta_level2          0x40
-%define sta_level3          0x60
-%define sta_present         0x80
-%define sta_non_present     0x00
-; 段选项
-%define stt_32def           0x40
-%define stt_32c16           0x00
-%define stt_64def           0x20
-%define stt_limitalign4kb   0x80
-
-; 64位页表项
-%macro paging 3
-    ; page (base, attribute, prot)
-    db %2 & 0xff
-    db ((%2 >> 8) & 0x0f) | ((%1 >> 8) & 0xf0)
-    dd (%1 >> 16) & 0xffffffff
-    dw ((%1 >> 48) & 0x0f) | (%3)
-%endmacro
 %define pag_present         0x001
-%define pag_non_present     0x000
 %define pag_writable        0x002
 %define pag_usermode        0x004
-%define pag_caching         0x008
-%define pag_discachable     0x010
+%define pag_writethrough    0x008
+%define pag_disablecache    0x010
 %define pag_accessed        0x020
 %define pag_dirty           0x040
 %define pag_huge            0x080
 %define pag_global          0x100
 %define pag_level           0x0400
 %define pag_noexecute       0x8000
+; 64位页表项
+%macro paging 3
+    ; page (base, attribute, prot)
+    db %2
+    db (((%2)>>8)&0xf)|(((%1)>>8)&0xf0)
+    dd (%1)>>16
+    dw ((%1)>>48)|(%3)
+%endmacro
 
 ; 错误号
 ; 0000  没有错误                    R

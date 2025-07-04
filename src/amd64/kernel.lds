@@ -12,9 +12,7 @@ SECTIONS {
     .data : {
         *(.data*);
     }
-    __bss_start = .;
     .bss : {
         *(.bss*);
     }
-    __bss_end = .;
 }

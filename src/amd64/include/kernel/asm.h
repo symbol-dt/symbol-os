@@ -9,10 +9,10 @@ typedef struct segment_register {
 
 int inb(uint16_t port);
 void outb(uint16_t port, uint8_t data);
-void insl(uint16_t port);
-void outsl(uint16_t port, uint16_t data);
-void insw(uint16_t port);
-void outsw(uint16_t port, uint32_t data);
+int inw(uint16_t port);
+void outw(uint16_t port, uint16_t data);
+int inl(uint16_t port);
+void outl(uint16_t port, uint32_t data);
 void call(uintptr_t addr);
 void call_far(uint16_t seg, uintptr_t addr);
 void jump(uintptr_t addr);

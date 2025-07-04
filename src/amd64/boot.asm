@@ -18,6 +18,7 @@ text:
     .head       db "(BOOT) Error#", 0
     .hello      db "Booting..."
     .tail       db 10, 13, 0
+    .hexbuffer  times 5 db 0
 
 align 16
 
@@ -28,6 +29,8 @@ start:
     mov ss, ax
     mov sp, ADDR_SEG_BOOT<<4
     mov bp, sp
+    sti
+    cld
 save_data:
     xor dh, dh
     mov [(ADDR_SEG_DATA<<4)+0], dx
@@ -71,62 +74,59 @@ read_loader:
     mov [dap.segment], ax
     mov si, dap
     mov dx, [(ADDR_SEG_DATA<<4)+0]
+    xchg bx, bx
     call read_disk
     push word [dap.segment]
     push word [dap.offset]
     retf
-putc:
-    pushad
-    mov ah, 0x0f
-    mov bx, 0x000f
-    int 0x10
-return:
-    popad
-    ret
-putx:
-    pushad
-    mov cx, 4
-    .putloop:
-        push ax
-        shr ax, 12
-        add al, '0'
-        cmp al, '9'
-        jb .skip
-        add al, ('a' - '0' - 10)
-    .skip:
-        call putc
-        pop ax
-        shl ax, 4
-    loop .putloop
-    jmp return
 puts:
     pushad
     .putloop:
         lodsb
         test al, al
         jz return
-        call putc
+        mov ah, 0x0e
+        mov bx, 0x000f
+        int 0x10
         jmp .putloop
+putx:
+    pushad
+    cld
+    push ds
+    pop es
+    mov di, text.hexbuffer
+    mov dx, ax
+    mov cx, 4
+    .putloop:
+        rol dx, 4
+        mov al, dl
+        and al, 0x0f
+        cmp al, 0x0a
+        jb .putdigit
+        add al, 0x07
+   .putdigit:
+        add al, 0x30
+        stosb
+        loop .putloop
+    mov si, text.hexbuffer
+    call puts
+return:
+    popad
+    ret
 read_disk:
     pushad
-    push si
-    push dx
     mov ah, 0x41
     mov bx, 0x55aa
     int 0x13
-    jc read_chs
+    jc return
     cmp bx, 0xaa55
-    jne read_chs
+    jne return
 read_lba:
-    pop dx
-    pop si
+    popad
+    pushad
     mov ah, 0x42
     int 0x13
-    jc read_chs
-    popad
-    ret
-read_chs:
-    mov ax, 0x0001
+    jnc return
 error:
     mov si, text.head
     call puts
@@ -134,12 +134,11 @@ error:
     mov si, text.tail
     call puts
 die:
-    sti
     hlt
     jmp die
 
 times (510-64)-($-$$) db 0x00
-mbr_null
+dvt mbr_null
 times (512-2)-($-$$) db 0x00
 dw 0xaa55
 

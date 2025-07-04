@@ -26,4 +26,4 @@
 
 ## 运行时错误
 
-参考 [文档](https://gitee.com/symbol-dt/sym-ods/raw/master/standard/sym-os/main.pdf) 中“错误码”一节。
+参考 [文档](https://gitee.com/symbol-dt/sym-ods/tree/develop/standard/sym-os) 中“错误码”一节。

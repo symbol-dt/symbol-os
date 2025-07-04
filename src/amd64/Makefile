@@ -9,7 +9,7 @@ LD		:= ld
 AR		:= ar
 PRJ		:= $(CURDIR)/../..
 
-build: clean archive boot kernel
+build: clean archive bootloader kernel
 
 debug: build
 	dd if=/dev/zero of=$(PRJ)/kernel/kernel.img seek=0 bs=512 count=2880 conv=notrunc
@@ -24,7 +24,7 @@ else
 	- rm $(TEMP)/*
 endif
 
-boot: boot.bin loader.bin
+bootloader: boot.bin loader.bin
 
 boot.bin: boot.asm
 	$(AS) boot.asm -o $(TEMP)/boot.bin -f bin -l $(TEMP)/boot.lst
@@ -35,8 +35,7 @@ loader.bin: loader.asm
 kernel: kernel.c
 	$(CC) kernel.c -o $(TEMP)/kernel.o $(CFLAGS)
 	$(LD) -m elf_x86_64 $(TEMP)/kernel.o \
-		-L$(TEMP) -lkernel \
-		-T ./kernel.lds \
+		-L$(TEMP) -T ./kernel.lds \
 		--oformat binary -o $(TEMP)/kernel.bin
 
 archive:

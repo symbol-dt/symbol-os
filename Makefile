@@ -1,18 +1,12 @@
-PRJ		:=	$(CURDIR)
-
-build: clean
-	$(MAKE) -C ./arch build PRJ=$(PRJ)
-
-debug: clean
-	$(MAKE) -C ./arch debug PRJ=$(PRJ)
-
-run: debug
-	- bochs
-
+project_path := $(CURDIR)
+all: clean
+	@ $(MAKE) -C $(project_path)/src "project_path=$(project_path)" "debug=true" "platform=amd64"
 clean: *
-ifeq ($(wildcard $(PRJ)/kernel), )
-	- mkdir $(PRJ)/kernel
+ifeq ($(wildcard $(project_path)/bin), )
+	@ mkdir -p $(project_path)/bin
 else
-	- rm $(PRJ)/kernel/*
-	$(MAKE) -C ./arch clean PRJ=$(PRJ)
+	@ rm -rf $(project_path)/bin/*
 endif
+configure: src/configure.c
+	@ $(CC) -o configure src/configure.c
+	@ ./configure
